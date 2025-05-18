@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Uploader Gallery</title>
+<style>
+  body { font-family: Arial,sans-serif; margin: 0; padding: 1em; }
+  #userForm, #uploadForm, #searchForm { margin-bottom: 1em; }
+  #gallery { 
+    column-count: 3; column-gap: 1em;
+  }
+  .file-card { 
+    break-inside: avoid; margin-bottom: 1em; border: 1px solid #ccc; padding: 0.5em; 
+    background: #f9f9f9; border-radius: 4px;
+  }
+  img, video { max-width: 100%; border-radius: 4px; }
+  progress { width: 100%; }
+  @media (max-width: 768px) {
+    #gallery { column-count: 1; }
+  }
+</style>
+</head>
+<body>
+
+<h1>Welcome</h1>
+
+<div id="step1">
+  <form id="userForm">
+    <label>Enter your name: <input name="username" required /></label>
+    <button type="submit">Continue</button>
+  </form>
+</div>
+
+<div id="step2" style="display:none;">
+  <p>User: <b id="usernameDisplay"></b></p>
+  <form id="uploadForm">
+    <input type="file" id="fileInput" multiple webkitdirectory />
+    <button type="submit">Upload</button>
+  </form>
+
+  <form id="searchForm">
+    <input type="text" id="searchQ" placeholder="Search filename..." />
+    <select id="searchType">
+      <option value="">All types</option>
+      <option value="image">Images</option>
+      <option value="video">Videos</option>
+      <option value="application/pdf">PDFs</option>
+    </select>
+    <button type="submit">Search</button>
+  </form>
+
+  <button id="downloadZip">Download All as ZIP</button>
+
+  <div id="gallery"></div>
+</div>
+
+<script src="/socket.io/socket.io.js"></script>
+<script>
+  const socket = io();
+  let currentUser = '';
+
+  const step1 = document.getElementById('step1');
+  const step2 = document.getElementById('step2');
+  const userForm = document.getElementById('userForm');
+  const uploadForm = document.getElementById('uploadForm');
+  const fileInput = document.getElementById('fileInput');
+  const usernameDisplay = document.getElementById('usernameDisplay');
+  const gallery = document.getElementById('gallery');
+  const searchForm = document.getElementById('searchForm');
+  const searchQ = document.getElementById('searchQ');
+  const searchType = document.getElementById('searchType');
+  const downloadZipBtn = document.getElementById('downloadZip');
+
+  userForm.addEventListener('submit', e => {
+    e.preventDefault();
+    currentUser = e.target.username.value.trim();
+    if (!currentUser) return alert('Enter a name');
+    usernameDisplay.textContent = currentUser;
+    step1.style.display = 'none';
+    step2.style.display = '';
+    socket.emit('joinUser', currentUser);
+  });
+
+  socket.on('fileList', files => {
+    gallery.innerHTML = '';
+    for (const f of files) renderFileCard(f);
+  });
+
+  socket.on('fileAdded', file => {
+    renderFileCard(file);
+  });
+
+  uploadForm.addEventListener('submit', async e => {
+    e.preventDefault();
+    if (!fileInput.files.length) return alert('Choose files first');
+    const fd = new FormData();
+    fd.append('username', currentUser);
+    for (const file of fileInput.files) {
+      // Preserve relative paths in file.name
+      fd.append('files', file, file.webkitRelativePath || file.name);
+    }
+    const res = await fetch('/upload', { method: 'POST', body: fd });
+    if (!res.ok) alert('Upload failed: ' + await res.text());
+    else {
+      alert('Upload complete!');
+      fileInput.value = '';
+      // Refresh file list by rejoining user room
+      socket.emit('joinUser', currentUser);
+    }
+  });
+
+  searchForm.addEventListener('submit', async e => {
+    e.preventDefault();
+    const q = searchQ.value.trim();
+    const type = searchType.value;
+    const url = `/search?username=${encodeURIComponent(currentUser)}&q=${encodeURIComponent(q)}&type=${encodeURIComponent(type)}`;
+    const res = await fetch(url);
+    if (!res.ok) return alert('Search failed');
+    const files = await res.json();
+    gallery.innerHTML = '';
+    for (const f of files) renderFileCard(f);
+  });
+
+  downloadZipBtn.addEventListener('click', () => {
+    window.location.href = `/zip/${encodeURIComponent(currentUser)}`;
+  });
+
+  function renderFileCard(file) {
+    if (document.querySelector(`[data-path="${file.relpath}"]`)) return; // avoid duplicates
+    const div = document.createElement('div');
+    div.className = 'file-card';
+    div.dataset.path = file.relpath;
+
+    let thumbHTML = '';
+    if (file.thumb) {
+      if (file.mimetype.startsWith('video')) {
+        thumbHTML = `<video src="/uploads/${encodeURIComponent(currentUser)}/${encodeURIComponent(file.relpath)}" controls muted preload="metadata" style="max-width:100%;border-radius:4px;"></video>`;
+      } else if (file.mimetype.startsWith('image')) {
+        thumbHTML = `<img src="/thumbs/${file.thumb}" alt="${file.filename} thumbnail" />`;
+      } else {
+        thumbHTML = `<p>No preview</p>`;
+      }
+    } else {
+      thumbHTML = `<p>No preview</p>`;
+    }
+
+    div.innerHTML = `
+      <strong>${file.filename}</strong><br/>
+      ${thumbHTML}
+      <br/>
+      <small>${(file.size / 1024).toFixed(1)} KB - ${new Date(file.created).toLocaleString()}</small><br/>
+      <a href="/uploads/${encodeURIComponent(currentUser)}/${encodeURIComponent(file.relpath)}" download>Download</a>
+    `;
+
+    gallery.appendChild(div);
+  }
+</script>
+
+</body>
+</html>
