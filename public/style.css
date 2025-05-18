@@ -1,0 +1,97 @@
+body {
+  font-family: Arial, sans-serif;
+  margin: 0; padding: 0;
+  background: #f0f0f0;
+  color: #333;
+}
+
+.centered {
+  max-width: 320px;
+  margin: 50px auto;
+  padding: 20px;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 0 15px rgba(0,0,0,0.1);
+  text-align: center;
+}
+
+.hidden {
+  display: none;
+}
+
+header {
+  background: #1976d2;
+  color: white;
+  padding: 10px 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+#upload-section, #gallery-section {
+  margin: 20px;
+  background: white;
+  border-radius: 8px;
+  padding: 15px;
+  box-shadow: 0 0 10px rgba(0,0,0,0.1);
+}
+
+.drop-area {
+  border: 2px dashed #bbb;
+  border-radius: 6px;
+  padding: 30px;
+  text-align: center;
+  cursor: pointer;
+  color: #555;
+  transition: background-color 0.3s ease;
+}
+
+.drop-area.dragover {
+  background-color: #d0f0fd;
+  border-color: #2196f3;
+}
+
+.gallery {
+  display: grid;
+  grid-template-columns: repeat(auto-fill,minmax(160px,1fr));
+  gap: 15px;
+}
+
+.gallery-item {
+  background: #fafafa;
+  border-radius: 6px;
+  box-shadow: 0 0 5px rgba(0,0,0,0.05);
+  padding: 8px;
+  text-align: center;
+}
+
+.gallery-item img, .gallery-item video {
+  max-width: 100%;
+  max-height: 120px;
+  border-radius: 4px;
+  margin-bottom: 6px;
+}
+
+button {
+  background: #1976d2;
+  color: white;
+  border: none;
+  padding: 8px 15px;
+  border-radius: 4px;
+  cursor: pointer;
+  margin-top: 10px;
+}
+
+button:disabled {
+  background: #aaa;
+  cursor: not-allowed;
+}
+
+input[type="text"], input[type="file"] {
+  width: 100%;
+  padding: 8px;
+  margin-top: 10px;
+  box-sizing: border-box;
+  border-radius: 4px;
+  border: 1px solid #ccc;
+}
